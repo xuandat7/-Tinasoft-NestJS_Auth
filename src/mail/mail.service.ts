@@ -63,4 +63,48 @@ export class AppMailService {
       }
     }
   }
+
+  async sendPasswordResetLink(email: string, token: string) {
+    const url = `http://localhost:3000/reset-password?token=${token}`;
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Đặt lại mật khẩu',
+        template: 'reset-password',
+        context: { 
+          url, 
+          email,
+          expiryTime: '15 phút'
+        },
+      });
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error('Failed to send password reset email:', error.message);
+      // As a fallback, send a simple HTML email without using templates
+      if (error.code === 'ENOENT') {
+        await this.mailerService.sendMail({
+          to: email,
+          subject: 'Đặt lại mật khẩu',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Đặt lại mật khẩu</h2>
+              <p>Chào bạn,</p>
+              <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <strong>${email}</strong>.</p>
+              <p>Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${url}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Đặt lại mật khẩu</a>
+              </div>
+              <p><strong>Lưu ý:</strong> Link này sẽ hết hạn sau 15 phút.</p>
+              <p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+              <hr style="margin: 30px 0;">
+              <p style="color: #666; font-size: 12px;">Email này được gửi tự động. Vui lòng không trả lời email này.</p>
+            </div>
+          `,
+        });
+        console.log(`Fallback password reset email sent to ${email}`);
+      } else {
+        throw error;
+      }
+    }
+  }
 }

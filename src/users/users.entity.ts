@@ -17,6 +17,20 @@ export class User {
   
   @Column({ nullable: true })
   avatar?: string;  // URL or path to user avatar image
+
+  // Role field for authorization
+  @Column({ default: 'user' })
+  role: string; // 'user' | 'admin'
+
+  // Brute-force protection fields
+  @Column({ default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lockedUntil?: Date;
+
+  @Column({ default: false })
+  isLocked: boolean;
   
   @BeforeInsert()
   @BeforeUpdate()
@@ -25,5 +39,10 @@ export class User {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
     }
+  }
+
+  // Method to check if account is locked
+  isAccountLocked(): boolean {
+    return this.isLocked && !!this.lockedUntil && new Date() < this.lockedUntil;
   }
 }

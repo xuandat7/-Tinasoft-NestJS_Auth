@@ -51,4 +51,46 @@ export class UsersService {
     await this.repo.update(id, { avatar: avatarUrl });
     return this.findOne(id);
   }
+
+  // Brute-force protection methods
+  async incrementFailedAttempts(email: string) {
+    const user = await this.findByEmail(email);
+    if (!user) return;
+
+    user.failedLoginAttempts += 1;
+
+    // Lock account after 5 failed attempts
+    const MAX_ATTEMPTS = 5;
+    const LOCK_TIME = 15 * 60 * 1000; // 15 minutes
+
+    if (user.failedLoginAttempts >= MAX_ATTEMPTS) {
+      user.isLocked = true;
+      user.lockedUntil = new Date(Date.now() + LOCK_TIME);
+    }
+
+    await this.repo.save(user);
+  }
+
+  // Reset failed attempts when login is successful
+  async resetFailedAttempts(email: string) {
+    const user = await this.findByEmail(email);
+    if (user) {
+      user.failedLoginAttempts = 0;
+      user.isLocked = false;
+      user.lockedUntil = undefined;
+      await this.repo.save(user);
+    }
+  }
+
+  // Admin function to unlock account manually
+  async unlockAccount(email: string) {
+    const user = await this.findByEmail(email);
+    if (user) {
+      user.failedLoginAttempts = 0;
+      user.isLocked = false;
+      user.lockedUntil = undefined;
+      await this.repo.save(user);
+    }
+    return { message: 'Tài khoản đã được mở khóa thành công' };
+  }
 }
